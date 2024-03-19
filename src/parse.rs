@@ -80,7 +80,7 @@ pub struct Weights {
 impl Weights {
     const WEIGHTS_PATH: &'static str = "weights.csv";
 
-    fn new(theta0: f64, theta1: f64) -> Self {
+    const fn new(theta0: f64, theta1: f64) -> Self {
         Self { theta0, theta1 }
     }
 
@@ -96,7 +96,10 @@ impl Weights {
         let mut rdr: Reader<File> = Reader::from_path(Self::WEIGHTS_PATH)?;
         let mut result = rdr.deserialize();
 
-        let weights: Self = result.next().unwrap()?;
+        let weights: Self = match result.next() {
+            Some(weights) => weights?,
+            None => Self::new(0.0, 0.0),
+        };
 
         Ok(weights)
     }

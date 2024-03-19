@@ -2,16 +2,18 @@ use crate::parse::{Record, Weights};
 
 /* Standardization */
 
-pub fn get_mean(values: &Vec<f64>) -> f64 {
+#[allow(clippy::cast_precision_loss)]
+pub fn get_mean(values: &[f64]) -> f64 {
     values.iter().sum::<f64>() / values.len() as f64
 }
 
-pub fn get_variance(values: &Vec<f64>) -> f64 {
+#[allow(clippy::cast_precision_loss)]
+pub fn get_variance(values: &[f64]) -> f64 {
     let mean = get_mean(values);
     values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64
 }
 
-pub fn get_standard_deviation(values: &Vec<f64>) -> f64 {
+pub fn get_standard_deviation(values: &[f64]) -> f64 {
     get_variance(values).sqrt()
 }
 
@@ -26,7 +28,8 @@ pub fn predict_price(km: f64, theta0: f64, theta1: f64) -> f64 {
 // Calculates the squared difference between the predicted and actual prices
 // Sums all these squared differences
 // and finally divides by the number of records to compute the MSE.
-fn calculate_mean_squared_error(dataset: &Vec<Record>, theta0: f64, theta1: f64) -> f64 {
+#[allow(clippy::cast_precision_loss)]
+fn calculate_mean_squared_error(dataset: &[Record], theta0: f64, theta1: f64) -> f64 {
     let m = dataset.len() as f64;
     let mut sum_squared_error = 0.0;
 
@@ -41,9 +44,10 @@ fn calculate_mean_squared_error(dataset: &Vec<Record>, theta0: f64, theta1: f64)
 }
 
 /* Gradient Descent */
+#[allow(clippy::cast_precision_loss)]
 fn gradient_descent(
-    dataset: &Vec<Record>,
-    weights: Weights,
+    dataset: &[Record],
+    weights: &Weights,
     learning_rate: f64,
     iterations: u32,
 ) -> (f64, f64) {
@@ -84,14 +88,14 @@ fn gradient_descent(
 
 /* Training */
 pub fn train_model(
-    dataset: Vec<Record>,
+    dataset: &[Record],
     learning_rate: f64,
     iterations: u32,
 ) -> Result<Weights, Box<dyn std::error::Error>> {
     let initial_weights = Weights::get()?;
 
     let (new_theta0, new_theta1) =
-        gradient_descent(&dataset, initial_weights, learning_rate, iterations);
+        gradient_descent(dataset, &initial_weights, learning_rate, iterations);
 
     let new_weights = Weights::set(new_theta0, new_theta1)?;
     Ok(new_weights)
