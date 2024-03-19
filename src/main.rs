@@ -1,55 +1,56 @@
+mod menu;
+use menu::{user_want_prediction, get_user_input};
+
 mod parse;
+use parse::{Dataset, Weights};
+
+mod training;
+use training::{predict_price, train_model};
 
 use std::error::Error;
-use std::io::{stdout, stdin, Write};
 
-fn user_menu() -> Result<f64, Box<dyn Error>> {
-    // Print the menu
-    let prompt: String = "Pick an option:\n1. Predict price\n2. Train model\n> ".to_string();
-    print!("{prompt}");
-    stdout().flush()?;
+fn prediction_compare() -> Result<(), Box<dyn Error>> {
+    let dataset: Dataset = Dataset::get()?;
+    let weights: Weights = Weights::get()?;
 
-    // Get user input
-    let mut input = String::new();
-    stdin().read_line(&mut input)?;
-    
-    // Match the input to the corresponding action
-    match input.trim().parse() {
-        // Predict price
-        Ok(1) => {
-            print!("Enter mileage (km): ");
-            stdout().flush()?;
-            let mut input = String::new();
-            stdin().read_line(&mut input)?;
-            
-            let km: f64 = input.trim().parse()?;
-            Ok(km)
-        }
-        // Train model
-        Ok(2) => {
-            println!("Training model...");
-            Ok(0.0)
-        }
-        // Invalid option, re-prompt the user
-        _ => {
-            println!("! Invalid option !");
-            Ok(user_menu()?)
-        }
+    for record in &dataset.records {
+        let km = record.km as f64;
+        let price = record.price as f64;
+
+        let std_km: f64 = dataset.get_standardized_km(km);
+
+        let prediction = predict_price(std_km, weights.theta0, weights.theta1);
+        println!("km: {} => {} => {}", km, price, prediction.round());
     }
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    user_menu()?;
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use ndarray::Array;
+fn main() -> Result<(), Box<dyn Error>> {
+    loop {
+        match user_want_prediction()? {
+            true => {
+                let user_input: String = get_user_input("Enter the number of kilometers: ")?;
+                let km: f64 = user_input.parse::<f64>()?;
+                
+                let weights: Weights = Weights::get()?;
+                let dataset: Dataset = Dataset::get()?;
+                let std_km: f64 = dataset.get_standardized_km(km);
 
-    #[test]
-    fn test_ndarray_working() {
-        let a = Array::from_vec(vec![1, 2, 3, 4]);
-        assert_eq!(a.sum(), 10);
+                let price: f64 = predict_price(std_km, weights.theta0, weights.theta1);
+                println!("The estimated price is: {}", price.round());
+            }
+            false => {
+                let std_dataset: Dataset = Dataset::get_standardized()?;
+
+                let user_input: String = get_user_input("Start with new weights? (y/n): ")?;
+                let user_choice: bool = user_input == "y";
+                if user_choice {
+                    Weights::set(0.0, 0.0)?;
+                }
+                let new_weights: Weights = train_model(std_dataset.records, 0.001, 10000)?;
+                println!("New weights: {:?}", new_weights);
+                prediction_compare()?;
+            }
+        }
     }
 }
