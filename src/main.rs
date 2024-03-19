@@ -1,32 +1,45 @@
-use serde::Deserialize;
+mod parse;
 
-#[derive(Debug, Deserialize)]
-struct Record {
-    km: u32,
-    price: u32,
-}
-
-use csv::Reader;
 use std::error::Error;
+use std::io::{stdout, stdin, Write};
 
-fn load_csv(file_path: &str) -> Result<Vec<Record>, Box<dyn Error>> {
-    let mut rdr = Reader::from_path(file_path)?;
-    let mut records = Vec::new();
+fn user_menu() -> Result<f64, Box<dyn Error>> {
+    // Print the menu
+    let prompt: String = "Pick an option:\n1. Predict price\n2. Train model\n> ".to_string();
+    print!("{prompt}");
+    stdout().flush()?;
 
-    for result in rdr.deserialize() {
-        let record: Record = result?;
-        records.push(record);
+    // Get user input
+    let mut input = String::new();
+    stdin().read_line(&mut input)?;
+    
+    // Match the input to the corresponding action
+    match input.trim().parse() {
+        // Predict price
+        Ok(1) => {
+            print!("Enter mileage (km): ");
+            stdout().flush()?;
+            let mut input = String::new();
+            stdin().read_line(&mut input)?;
+            
+            let km: f64 = input.trim().parse()?;
+            Ok(km)
+        }
+        // Train model
+        Ok(2) => {
+            println!("Training model...");
+            Ok(0.0)
+        }
+        // Invalid option, re-prompt the user
+        _ => {
+            println!("! Invalid option !");
+            Ok(user_menu()?)
+        }
     }
-
-    Ok(records)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let records = load_csv("data.csv")?;
-    println!("Loaded {} records", records.len());
-    for record in records {
-        println!("km: {}, price: {}", record.km, record.price);
-    }
+    user_menu()?;
     Ok(())
 }
 
@@ -38,20 +51,5 @@ mod tests {
     fn test_ndarray_working() {
         let a = Array::from_vec(vec![1, 2, 3, 4]);
         assert_eq!(a.sum(), 10);
-    }
-
-    use super::load_csv;
-    use super::Record;
-
-    #[test]
-    #[allow(clippy::expect_used)]
-    fn test_valid_csv() {
-        let records: Vec<Record> = load_csv("data.csv").expect("Failed to load 'data.csv'");
-        assert_eq!(records.len(), 24); // Ensures there are 24 rows of data
-        for record in records {
-            // This asserts that each record has a 'km' and 'price' field.
-            // It will panic if any of the fields are missing in any row, effectively testing the presence of these columns.
-            println!("km: {}, price: {}", record.km, record.price);
-        }
     }
 }
