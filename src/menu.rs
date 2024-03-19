@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
 
-pub fn get_user_input(prompt: &str) -> Result<String, Box<dyn Error>>{
-    print!("{}", prompt);
+pub fn get_user_input(prompt: &str) -> Result<String, Box<dyn Error>> {
+    print!("{prompt}");
     stdout().flush()?;
 
     let mut input: String = String::new();
@@ -12,8 +12,7 @@ pub fn get_user_input(prompt: &str) -> Result<String, Box<dyn Error>>{
 }
 
 pub fn user_want_prediction() -> Result<bool, Box<dyn Error>> {
-
-    let user_choice: String = get_user_input("Pick an option:\n1. Predict price\n2. Train model\n> ")?;
+    let user_choice: String = get_user_input("==================================================\nPick an option:\n1. Predict price\n2. Train model\n> ")?;
 
     match user_choice.as_str() {
         "1" => Ok(true),

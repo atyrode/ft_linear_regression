@@ -1,5 +1,5 @@
 mod menu;
-use menu::{user_want_prediction, get_user_input};
+use menu::{get_user_input, user_want_prediction};
 
 mod parse;
 use parse::{Dataset, Weights};
@@ -14,8 +14,8 @@ fn prediction_compare() -> Result<(), Box<dyn Error>> {
     let weights: Weights = Weights::get()?;
 
     for record in &dataset.records {
-        let km = record.km as f64;
-        let price = record.price as f64;
+        let km = record.km;
+        let price = record.price;
 
         let std_km: f64 = dataset.get_standardized_km(km);
 
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             true => {
                 let user_input: String = get_user_input("Enter the number of kilometers: ")?;
                 let km: f64 = user_input.parse::<f64>()?;
-                
+
                 let weights: Weights = Weights::get()?;
                 let dataset: Dataset = Dataset::get()?;
                 let std_km: f64 = dataset.get_standardized_km(km);
@@ -47,8 +47,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if user_choice {
                     Weights::set(0.0, 0.0)?;
                 }
-                let new_weights: Weights = train_model(std_dataset.records, 0.001, 10000)?;
-                println!("New weights: {:?}", new_weights);
+                println!("==================================================");
+                let new_weights: Weights = train_model(std_dataset.records, 0.1, 100)?;
+                println!(
+                    "New computed weights:\ntheta0: {}\ntheta1: {}",
+                    new_weights.theta0, new_weights.theta1
+                );
+                println!("==================================================");
                 prediction_compare()?;
             }
         }
