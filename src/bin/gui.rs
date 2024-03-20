@@ -1,30 +1,75 @@
 use ft_linear_regression::core::{predict_price, train_model};
 use ft_linear_regression::{bonus, io, Dataset, Error, Weights};
 
-use prettytable::{format, row, Cell, Row, Table};
+use prettytable::row;
+use tabled::{
+    settings::{
+        Width, 
+        Color,
+        Alignment,
+        Settings,
+        Theme,
+        object::Rows,
+        style::Style,
+        themes::Colorization,
+        peaker::PriorityMax,
+    },
+    Table,
+    Tabled
+};
 
-fn create_menu() -> Table {
-    let mut menu = Table::new();
-    menu.set_format(*format::consts::FORMAT_BORDERS_ONLY);
-    menu.set_titles(Row::new(vec![Cell::new("Menu").style_spec("Fcbc")]));
+static MENU_OPTIONS: [&str; 10] = [
+    "Predict price",
+    "Train model",
+    "Reset weights",
+    "Show weights",
+    "Show comparison",
+    "Show graph",
+    "Show precision",
+    "Show training parameters",
+    "Edit training parameters",
+    "Reset training parameters"
+];
 
-    let options = [
-        "Predict price",
-        "Train model",
-        "Reset weights",
-        "Show weights",
-        "Show comparison",
-        "Show graph",
-        "Show precision",
-        "Show training parameters",
-        "Edit training parameters",
-    ];
+#[derive(Tabled)]
+struct MenuItem {
+    #[tabled(rename = "Menu")]
+    option: String,
+}
 
-    for (i, option) in options.iter().enumerate() {
-        menu.add_row(row![format!("{}) {}", i + 1, option)]);
-    }
+fn create_menu() {
 
-    menu
+    // Clear the terminal
+    print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
+
+    let term_width: usize = io::get_term_width();
+
+    let menu_items: Vec<MenuItem> = MENU_OPTIONS
+        .iter()
+        .enumerate()
+        .map(|(id, &option)| MenuItem { option: format!("{}. {}", id + 1, option) })
+        .collect();
+
+    let mut table = Table::new(menu_items);
+    table.modify(Rows::new(..1), Alignment::center());
+    table.with(Colorization::exact([Color::FG_CYAN], Rows::first()));
+
+    let style = Theme::from_style(Style::rounded());
+
+    table.with(style);
+
+    let settings = Settings::default()
+    .with(Width::wrap(term_width).priority::<PriorityMax>())
+    .with(Width::increase(term_width));
+    table.with(settings);
+
+    println!("{table}");
+}
+
+fn print_training_parameters(learning_rate: f64, iterations: u32, batch: u32) {
+    let mut table = io::create_table(&["Learning rate", "Iterations", "Batch"]);
+    table.add_row(row![learning_rate, iterations, batch]);
+    io::print_dyn_table(&table).unwrap();
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -32,15 +77,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut iterations: u32 = 100;
     let mut batch: u32 = 10;
 
-    let menu = create_menu();
-
     loop {
-        // Clear the terminal
-        print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
 
-        io::print_dyn_table(&menu)?;
-        println!("{}", io::underline("Pick an option", "-"));
-
+        create_menu();
+        
+        println!("\n{}", io::underline("Pick an option", "-"));
         let user_choice: String = io::get_user_input("> ")?;
 
         println!();
@@ -59,18 +100,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             "3" => {
                 Weights::initialize()?;
-                let mut table: Table = io::create_table(&["theta0", "theta1"]);
+                let mut table = io::create_table(&["theta0", "theta1"]);
                 table.add_row(row![0.0, 0.0]);
                 io::print_dyn_table(&table)?;
             }
             "4" => {
-                let mut table: Table = io::create_table(&["theta0", "theta1"]);
+                let mut table = io::create_table(&["theta0", "theta1"]);
                 table.add_row(row![weights.theta0, weights.theta1]);
                 io::print_dyn_table(&table)?;
             }
             "5" => {
-                let mut table: Table =
-                    io::create_table(&["km", "price", "predicted", "accuracy (%)"]);
+                let mut table = io::create_table(&["km", "price", "predicted", "accuracy (%)"]);
                 let predictions = bonus::prediction_compare(&dataset, &weights);
                 for prediction in predictions {
                     table.add_row(row![
@@ -91,10 +131,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("The model's precision (R²) is: {rounded_r_squared}%");
             }
             "8" => {
-                println!("Training parameters:");
-                let mut table: Table = io::create_table(&["Learning rate", "Iterations", "Batch"]);
-                table.add_row(row![learning_rate, iterations, batch]);
-                io::print_dyn_table(&table)?;
+                print_training_parameters(learning_rate, iterations, batch);
             }
             "9" => {
                 println!("Current learning rate: {learning_rate}");
@@ -108,13 +145,26 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("\nCurrent batch: {batch}");
                 let new_batch = io::get_user_input("New => ")?;
                 batch = new_batch.parse::<u32>()?;
+                
+                println!();
+                print_training_parameters(learning_rate, iterations, batch);
+            }
+            "10" => {
+                learning_rate = 0.1;
+                iterations = 100;
+                batch = 10;
+                println!("Training parameters were reset to default values.");
+                println!();
+                print_training_parameters(learning_rate, iterations, batch);
             }
             _ => {
                 println!("Invalid option. Please try again.");
             }
         }
 
-        let _ = io::get_user_input("\n-> Press any key to continue <-");
+        let gray_color = "\x1b[90m";
+        let reset = "\x1b[0m";
+        let _ = io::get_user_input(&format!("{}{}{}", gray_color, "\nPress Enter to continue...", reset));
         println!();
     }
 }
