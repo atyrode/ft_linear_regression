@@ -36,7 +36,7 @@ impl Dataset {
         Ok(Self::new(records))
     }
 
-    fn get_kms(&self) -> Vec<f64> {
+    pub fn get_kms(&self) -> Vec<f64> {
         self.records.iter().map(|record| record.km).collect()
     }
 
@@ -47,25 +47,6 @@ impl Dataset {
         let std_dev = get_standard_deviation(&kms);
 
         (km - mean) / std_dev
-    }
-
-    pub fn get_standardized() -> Result<Self, Box<dyn Error>> {
-        let dataset = Self::get()?;
-
-        let standardized_records: Vec<Record> = dataset
-            .records
-            .iter()
-            .map(|record| {
-                let km = record.km;
-                let price = record.price;
-
-                let std_km = dataset.get_standardized_km(km);
-
-                Record { km: std_km, price }
-            })
-            .collect();
-
-        Ok(Self::new(standardized_records))
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::parse::{Record, Weights};
+use crate::parsing::{Dataset, Weights};
 
 /* Standardization */
 
@@ -29,12 +29,12 @@ pub fn predict_price(km: f64, theta0: f64, theta1: f64) -> f64 {
 // Sums all these squared differences
 // and finally divides by the number of records to compute the MSE.
 #[allow(clippy::cast_precision_loss)]
-fn calculate_mean_squared_error(dataset: &[Record], theta0: f64, theta1: f64) -> f64 {
-    let m = dataset.len() as f64;
+fn calculate_mean_squared_error(dataset: &Dataset, theta0: f64, theta1: f64) -> f64 {
+    let m = dataset.records.len() as f64;
     let mut sum_squared_error = 0.0;
 
-    for record in dataset {
-        let km = record.km;
+    for record in &dataset.records {
+        let km: f64 = dataset.get_standardized_km(record.km);
         let price = record.price;
         let prediction = predict_price(km, theta0, theta1);
         sum_squared_error += (prediction - price).abs();
@@ -46,25 +46,27 @@ fn calculate_mean_squared_error(dataset: &[Record], theta0: f64, theta1: f64) ->
 /* Gradient Descent */
 #[allow(clippy::cast_precision_loss)]
 fn gradient_descent(
-    dataset: &[Record],
+    dataset: &Dataset,
     weights: &Weights,
     learning_rate: f64,
     iterations: u32,
 ) -> (f64, f64) {
-    let m = dataset.len() as f64;
+    let m = dataset.records.len() as f64;
 
     let mut new_theta0: f64 = weights.theta0;
     let mut new_theta1: f64 = weights.theta1;
 
+    println!("Iterations\tError margin");
+    println!("{}", "-".repeat(30));
     for iteration in 0..iterations {
         let mut sum_errors_theta_0 = 0.0;
         let mut sum_errors_theta_1 = 0.0;
 
         // Calculate errors for gradients
-        for record in dataset {
-            let km = record.km;
-            let price = record.price;
-            let prediction = predict_price(km, new_theta0, new_theta1);
+        for record in &dataset.records {
+            let km: f64 = dataset.get_standardized_km(record.km);
+            let price: f64 = record.price;
+            let prediction: f64 = predict_price(km, new_theta0, new_theta1);
             sum_errors_theta_0 += prediction - price;
             sum_errors_theta_1 += (prediction - price) * km;
         }
@@ -75,9 +77,8 @@ fn gradient_descent(
 
         // Optionally print MSE to monitor training progress
         if iteration % (iterations / 10) == 0 {
-            // For example, every 100 iterations
             let mse = calculate_mean_squared_error(dataset, new_theta0, new_theta1);
-            println!("Iteration {iteration}: MSE = {mse}");
+            println!("{iteration}\t=>\t{}", mse.round());
         }
     }
 
@@ -88,7 +89,7 @@ fn gradient_descent(
 
 /* Training */
 pub fn train_model(
-    dataset: &[Record],
+    dataset: &Dataset,
     learning_rate: f64,
     iterations: u32,
 ) -> Result<Weights, Box<dyn std::error::Error>> {
