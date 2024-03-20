@@ -49,7 +49,7 @@ pub fn calculate_precision(dataset: &Dataset, weights: &Weights) -> f64 {
         .sum::<f64>();
 
     let r_squared: f64 = 1.0 - residuals_sum_squares / total_sum_squares;
-    
+
     if r_squared < 0.0 {
         0.0
     } else {

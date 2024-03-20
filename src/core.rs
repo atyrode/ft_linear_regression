@@ -10,12 +10,11 @@ use crate::{Dataset, Weights};
 pub fn predict_price(dataset: &Dataset, weights: &Weights) -> Result<(), Box<dyn Error>> {
     let user_input: String = io::get_user_input("Enter the number of kilometers: ")?;
 
-    let km: f64 = match user_input.parse::<f64>() {
-        Ok(km) => km,
-        Err(_) => {
-            println!("Please enter a valid number.");
-            return Ok(());
-        }
+    let km: f64 = if let Ok(km) = user_input.parse::<f64>() {
+        km
+    } else {
+        println!("Please enter a valid number.");
+        return Ok(());
     };
 
     let std_km: f64 = dataset.scaler.standardize(km);

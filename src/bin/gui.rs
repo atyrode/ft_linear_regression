@@ -4,18 +4,10 @@ use ft_linear_regression::{bonus, io, Dataset, Error, Weights};
 use prettytable::row;
 use tabled::{
     settings::{
-        Width, 
-        Color,
-        Alignment,
-        Settings,
-        Theme,
-        object::Rows,
-        style::Style,
-        themes::Colorization,
-        peaker::PriorityMax,
+        object::Rows, peaker::PriorityMax, style::Style, themes::Colorization, Alignment, Color,
+        Settings, Theme, Width,
     },
-    Table,
-    Tabled
+    Table, Tabled,
 };
 
 static MENU_OPTIONS: [&str; 10] = [
@@ -28,7 +20,7 @@ static MENU_OPTIONS: [&str; 10] = [
     "Show precision",
     "Show training parameters",
     "Edit training parameters",
-    "Reset training parameters"
+    "Reset training parameters",
 ];
 
 #[derive(Tabled)]
@@ -38,7 +30,6 @@ struct MenuItem {
 }
 
 fn create_menu() {
-
     // Clear the terminal
     print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
 
@@ -47,7 +38,9 @@ fn create_menu() {
     let menu_items: Vec<MenuItem> = MENU_OPTIONS
         .iter()
         .enumerate()
-        .map(|(id, &option)| MenuItem { option: format!("{}. {}", id + 1, option) })
+        .map(|(id, &option)| MenuItem {
+            option: format!("{}. {}", id + 1, option),
+        })
         .collect();
 
     let mut table = Table::new(menu_items);
@@ -59,17 +52,22 @@ fn create_menu() {
     table.with(style);
 
     let settings = Settings::default()
-    .with(Width::wrap(term_width).priority::<PriorityMax>())
-    .with(Width::increase(term_width));
+        .with(Width::wrap(term_width).priority::<PriorityMax>())
+        .with(Width::increase(term_width));
     table.with(settings);
 
     println!("{table}");
 }
 
-fn print_training_parameters(learning_rate: f64, iterations: u32, batch: u32) {
+fn print_training_parameters(
+    learning_rate: f64,
+    iterations: u32,
+    batch: u32,
+) -> Result<(), Box<dyn Error>> {
     let mut table = io::create_table(&["Learning rate", "Iterations", "Batch"]);
     table.add_row(row![learning_rate, iterations, batch]);
-    io::print_dyn_table(&table).unwrap();
+    io::print_dyn_table(&table)?;
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -78,9 +76,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut batch: u32 = 10;
 
     loop {
-
         create_menu();
-        
+
         println!("\n{}", io::underline("Pick an option", "-"));
         let user_choice: String = io::get_user_input("> ")?;
 
@@ -131,7 +128,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("The model's precision (R²) is: {rounded_r_squared}%");
             }
             "8" => {
-                print_training_parameters(learning_rate, iterations, batch);
+                print_training_parameters(learning_rate, iterations, batch)?;
             }
             "9" => {
                 println!("Current learning rate: {learning_rate}");
@@ -145,9 +142,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("\nCurrent batch: {batch}");
                 let new_batch = io::get_user_input("New => ")?;
                 batch = new_batch.parse::<u32>()?;
-                
+
                 println!();
-                print_training_parameters(learning_rate, iterations, batch);
+                print_training_parameters(learning_rate, iterations, batch)?;
             }
             "10" => {
                 learning_rate = 0.1;
@@ -155,7 +152,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 batch = 10;
                 println!("Training parameters were reset to default values.");
                 println!();
-                print_training_parameters(learning_rate, iterations, batch);
+                print_training_parameters(learning_rate, iterations, batch)?;
             }
             _ => {
                 println!("Invalid option. Please try again.");
@@ -164,7 +161,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let gray_color = "\x1b[90m";
         let reset = "\x1b[0m";
-        let _ = io::get_user_input(&format!("{}{}{}", gray_color, "\nPress Enter to continue...", reset));
+        let _ = io::get_user_input(&format!(
+            "{}{}{}",
+            gray_color, "\nPress Enter to continue...", reset
+        ));
         println!();
     }
 }
