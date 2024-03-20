@@ -1,6 +1,6 @@
+use crate::model::predict;
 use crate::parsing::{Dataset, Weights};
-use crate::training::predict_price;
-use textplots::{AxisBuilder, Chart, LineStyle, Plot, Shape, TickDisplay, TickDisplayBuilder};
+use textplots::{Chart, Plot, Shape};
 
 pub fn prediction_compare(dataset: &Dataset, weights: &Weights) {
     println!("km\t\tprice\t\tprediction");
@@ -11,12 +11,13 @@ pub fn prediction_compare(dataset: &Dataset, weights: &Weights) {
 
         let std_km: f64 = dataset.get_standardized_km(km);
 
-        let prediction: f64 = predict_price(std_km, weights.theta0, weights.theta1);
+        let prediction: f64 = predict(std_km, weights.theta0, weights.theta1);
         println!("{}\t=>\t{}\t=>\t{}", km, price, prediction.round());
     }
 }
 
 #[allow(clippy::cast_precision_loss)]
+#[must_use]
 pub fn calculate_precision(dataset: &Dataset, weights: &Weights) -> f64 {
     let mean_prices: f64 = dataset
         .records
@@ -36,7 +37,7 @@ pub fn calculate_precision(dataset: &Dataset, weights: &Weights) -> f64 {
         .iter()
         .map(|record| {
             let std_km = dataset.get_standardized_km(record.km);
-            let prediction = predict_price(std_km, weights.theta0, weights.theta1);
+            let prediction = predict(std_km, weights.theta0, weights.theta1);
             (record.price - prediction).powi(2)
         })
         .sum::<f64>();
@@ -81,22 +82,24 @@ pub fn display_dataset_plot(dataset: &Dataset, weights: &Weights) {
 
     let mut chart = Chart::new_with_y_range(180, 80, x_min, x_max, y_min, y_max);
 
-    let std_x_min = dataset.get_standardized_km(x_min as f64);
-    let std_x_max = dataset.get_standardized_km(x_max as f64);
-    
+    let std_x_min = dataset.get_standardized_km(f64::from(x_min));
+    let std_x_max = dataset.get_standardized_km(f64::from(x_max));
+
     let linear_regression: &[(f32, f32)] = &[
-        (x_min, predict_price(std_x_min as f64, weights.theta0, weights.theta1) as f32),
-        (x_max, predict_price(std_x_max as f64, weights.theta0, weights.theta1) as f32),
+        (
+            x_min,
+            predict(std_x_min, weights.theta0, weights.theta1) as f32,
+        ),
+        (
+            x_max,
+            predict(std_x_max, weights.theta0, weights.theta1) as f32,
+        ),
     ];
 
     // Plot the dataset
     println!("\nX -> Car Mileage | Y -> Car Price\n");
     chart
         .lineplot(&Shape::Points(&points))
-        .lineplot(&Shape::Lines(&linear_regression))
-        // .lineplot(&Shape::Continuous(Box::new(|x| {
-        //     let std_km = dataset.get_standardized_km(f64::from(x));
-        //     predict_price(std_km, weights.theta0, weights.theta1) as f32
-        // })))
+        .lineplot(&Shape::Lines(linear_regression))
         .nice();
 }

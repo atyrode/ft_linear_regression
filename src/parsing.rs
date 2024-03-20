@@ -1,4 +1,4 @@
-use crate::training::{get_mean, get_standard_deviation};
+use crate::model::{get_mean, get_standard_deviation};
 use csv::{Reader, Writer};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -21,10 +21,12 @@ pub struct Record {
 impl Dataset {
     const DATASET_PATH: &'static str = "data.csv";
 
+    #[must_use]
     pub fn new(records: Vec<Record>) -> Self {
         Self { records }
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn get() -> Result<Self, Box<dyn Error>> {
         let mut rdr: Reader<File> = Reader::from_path(Self::DATASET_PATH)?;
         let mut records: Vec<Record> = Vec::new();
@@ -36,10 +38,12 @@ impl Dataset {
         Ok(Self::new(records))
     }
 
+    #[must_use]
     pub fn get_kms(&self) -> Vec<f64> {
         self.records.iter().map(|record| record.km).collect()
     }
 
+    #[must_use]
     pub fn get_standardized_km(&self, km: f64) -> f64 {
         let kms = self.get_kms();
 
@@ -65,6 +69,10 @@ impl Weights {
         Self { theta0, theta1 }
     }
 
+    pub fn default() -> Self {
+        Self::new(0.0, 0.0)
+    }
+
     fn write(&self) -> Result<(), Box<dyn Error>> {
         let mut wtr = Writer::from_path(Self::WEIGHTS_PATH)?;
         wtr.serialize(self)?;
@@ -79,7 +87,7 @@ impl Weights {
 
         let weights: Self = match result.next() {
             Some(weights) => weights?,
-            None => Self::new(0.0, 0.0),
+            None => Self::default(),
         };
 
         Ok(weights)
@@ -89,6 +97,7 @@ impl Weights {
         Path::new(Self::WEIGHTS_PATH).exists()
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn get() -> Result<Self, Box<dyn Error>> {
         if Self::file_exists() {
             Self::read()
@@ -99,6 +108,7 @@ impl Weights {
         }
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn set(theta0: f64, theta1: f64) -> Result<Self, Box<dyn Error>> {
         let weights = Self::new(theta0, theta1);
         weights.write()?;
