@@ -1,19 +1,25 @@
+use crate::io::{get_term_height, get_term_width};
 use crate::model::predict;
-use crate::parsing::{Dataset, Weights};
+use crate::{Dataset, Weights};
 use textplots::{Chart, Plot, Shape};
 
-pub fn prediction_compare(dataset: &Dataset, weights: &Weights) {
-    println!("km\t\tprice\t\tprediction");
-    println!("{}", "-".repeat(50));
-    for record in &dataset.records {
-        let km: f64 = record.km;
-        let price: f64 = record.price;
-
-        let std_km: f64 = dataset.get_standardized_km(km);
-
-        let prediction: f64 = predict(std_km, weights.theta0, weights.theta1);
-        println!("{}\t=>\t{}\t=>\t{}", km, price, prediction.round());
-    }
+#[must_use]
+pub fn prediction_compare(dataset: &Dataset, weights: &Weights) -> Vec<Vec<f64>> {
+    dataset
+        .records
+        .iter()
+        .map(|record| {
+            let std_km = dataset.scaler.standardize(record.km);
+            let prediction = predict(std_km, weights.theta0, weights.theta1);
+            let precision = 100.0 * (1.0 - (record.price - prediction).abs() / record.price);
+            vec![
+                record.km,
+                record.price,
+                prediction.round(),
+                (precision * 100.0).round() / 100.0,
+            ]
+        })
+        .collect()
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -36,7 +42,7 @@ pub fn calculate_precision(dataset: &Dataset, weights: &Weights) -> f64 {
         .records
         .iter()
         .map(|record| {
-            let std_km = dataset.get_standardized_km(record.km);
+            let std_km = dataset.scaler.standardize(record.km);
             let prediction = predict(std_km, weights.theta0, weights.theta1);
             (record.price - prediction).powi(2)
         })
@@ -49,6 +55,9 @@ pub fn calculate_precision(dataset: &Dataset, weights: &Weights) -> f64 {
 
 #[allow(clippy::cast_possible_truncation)]
 pub fn display_dataset_plot(dataset: &Dataset, weights: &Weights) {
+    let term_w: u32 = get_term_width() as u32;
+    let term_h: u32 = get_term_height() as u32;
+
     let points: Vec<(f32, f32)> = dataset
         .records
         .iter()
@@ -74,17 +83,22 @@ pub fn display_dataset_plot(dataset: &Dataset, weights: &Weights) {
     let y_min = points.iter().map(|p| p.1).fold(f32::INFINITY, f32::min);
     let y_max = points.iter().map(|p| p.1).fold(f32::NEG_INFINITY, f32::max);
 
+    // Calculate the range of y values
     let y_range = y_max - y_min;
     let buffer = y_range * buffer_percent;
 
+    // Apply the buffer
     let y_min = y_min - buffer;
     let y_max = y_max + buffer;
 
-    let mut chart = Chart::new_with_y_range(180, 80, x_min, x_max, y_min, y_max);
+    /* Create the chart */
+    let mut chart = Chart::new_with_y_range(term_w + 60, term_h, x_min, x_max, y_min, y_max);
 
-    let std_x_min = dataset.get_standardized_km(f64::from(x_min));
-    let std_x_max = dataset.get_standardized_km(f64::from(x_max));
+    // Calculate the linear regression start and end X points
+    let std_x_min = dataset.scaler.standardize(f64::from(x_min));
+    let std_x_max = dataset.scaler.standardize(f64::from(x_max));
 
+    // Calculate the linear regression start and end Y points
     let linear_regression: &[(f32, f32)] = &[
         (
             x_min,
@@ -97,7 +111,7 @@ pub fn display_dataset_plot(dataset: &Dataset, weights: &Weights) {
     ];
 
     // Plot the dataset
-    println!("\nX -> Car Mileage | Y -> Car Price\n");
+    println!("X -> Car Mileage | Y -> Car Price\n");
     chart
         .lineplot(&Shape::Points(&points))
         .lineplot(&Shape::Lines(linear_regression))
