@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 predict_price()?;
             }
             "2" => {
-                train_model(0.2, 100, true)?;
+                train_model(0.2, 100, 10, true)?;
             }
             _ => {
                 println!("Invalid option. Please try again.");

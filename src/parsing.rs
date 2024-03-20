@@ -69,10 +69,6 @@ impl Weights {
         Self { theta0, theta1 }
     }
 
-    pub fn default() -> Self {
-        Self::new(0.0, 0.0)
-    }
-
     fn write(&self) -> Result<(), Box<dyn Error>> {
         let mut wtr = Writer::from_path(Self::WEIGHTS_PATH)?;
         wtr.serialize(self)?;
@@ -85,10 +81,7 @@ impl Weights {
         let mut rdr: Reader<File> = Reader::from_path(Self::WEIGHTS_PATH)?;
         let mut result = rdr.deserialize();
 
-        let weights: Self = match result.next() {
-            Some(weights) => weights?,
-            None => Self::default(),
-        };
+        let weights = result.next().unwrap()?;
 
         Ok(weights)
     }
