@@ -56,6 +56,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let r_squared: f64 = bonus::calculate_precision(&dataset, &new_weights);
                 let rounded_r_squared: f64 = (r_squared * 100.0).round() / 100.0;
                 println!("Precision (R²) closer to 1 == better: {rounded_r_squared}");
+                println!("==================================================");
+                bonus::display_dataset_plot(&dataset, &new_weights);
             }
             _ => {
                 println!("Invalid option. Please try again.");
